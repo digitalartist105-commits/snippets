@@ -1,0 +1,120 @@
+flutter create ai_chat_app
+cd ai_chat_app
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.6import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+void main() {
+  runApp(const AIChatApp());
+}
+
+class AIChatApp extends StatelessWidget {
+  const AIChatApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'AI Chatbot',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const ChatScreen(),
+    );
+  }
+}
+
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  List<Map<String, String>> messages = [];
+
+  Future<void> sendMessage(String text) async {
+    setState(() {
+      messages.add({"user": text});
+    });
+
+    // Yahaan aap apna AI API lagayenge (OpenAI, Gemini ya koi aur)
+    var response = await http.post(
+      Uri.parse("https://api.openai.com/v1/chat/completions"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      body: jsonEncode({
+        "model": "gpt-3.5-turbo",
+        "messages": [
+          {"role": "user", "content": text}
+        ]
+      }),
+    );
+
+    var data = jsonDecode(response.body);
+    String reply = data["choices"][0]["message"]["content"];
+
+    setState(() {
+      messages.add({"bot": reply});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("AI Chatbot")),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                var msg = messages[index];
+                if (msg.containsKey("user")) {
+                  return ListTile(
+                    title: Text("You: ${msg["user"]}"),
+                  );
+                } else {
+                  return ListTile(
+                    title: Text("AI: ${msg["bot"]}"),
+                  );
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: "Type your message...",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: () {
+                    if (_controller.text.isNotEmpty) {
+                      sendMessage(_controller.text);
+                      _controller.clear();
+                    }
+                  },
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+flutter build apk --releasflutter build apk --release
